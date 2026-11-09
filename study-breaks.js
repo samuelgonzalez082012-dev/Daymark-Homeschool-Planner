@@ -63,6 +63,15 @@
     return null;
   }
 
+  function findUpcomingForSubject(records, subjectId, fromKey) {
+    const list = Array.isArray(records) ? records : [];
+    for (let index = list.length - 1; index >= 0; index -= 1) {
+      const record = list[index];
+      if (record.subjectId === subjectId && !record.cancelled && record.endDate >= fromKey) return record;
+    }
+    return null;
+  }
+
   function applyToTasks(tasks, records, key, subjects, logs = []) {
     let result = Array.isArray(tasks) ? tasks.slice() : [];
     for (const subject of subjects || []) {
@@ -89,5 +98,5 @@
     return result;
   }
 
-  return Object.freeze({ validDateKey, addDays, endDate, normalize, normalizeAll, isActive, findForSubject, applyToTasks });
+  return Object.freeze({ validDateKey, addDays, endDate, normalize, normalizeAll, isActive, findForSubject, findUpcomingForSubject, applyToTasks });
 });
