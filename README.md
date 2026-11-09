@@ -95,6 +95,7 @@ Planner data remains in browser storage as before. Export a backup from **Settin
 - `index.html` — app structure
 - `styles.css` — visual design, responsive layout, and print styles
 - `app.js` — planner, curriculum import UI, local AI client, scheduling, tracking, storage, and reports
+- `study-breaks.js` — reusable temporary study-break date and calendar replacement logic
 - `serve.py` — standard-library local web server and Ollama bridge
 - `Start-Daymark.bat` — Windows launcher
 - `tests/` — local helper unit tests
