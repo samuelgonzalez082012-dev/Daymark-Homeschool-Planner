@@ -8,7 +8,7 @@
   "author": "samue",
   "scripts": {
     "start": "electron .",
-    "test": "node --test"
+    "test": "node --check app.js && node --check study-breaks.js && node --test"
   },
   "dependencies": {},
   "devDependencies": {
