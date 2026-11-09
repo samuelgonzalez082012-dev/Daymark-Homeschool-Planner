@@ -581,7 +581,7 @@
       label: task.title, description: task.subjectId ? (state.subjects.find(s => s.id === task.subjectId)?.curriculum || '') : 'Custom task',
       quantity: Number(task.quantity) || 0, unit: task.unit || 'tasks', done: !!task.done, metric: null, custom: true, task
     }));
-    return StudyBreaks.applyToTasks([...generated, ...curriculum, ...manual], state.studyBreaks, key, state.subjects);
+    return StudyBreaks.applyToTasks([...generated, ...curriculum, ...manual], state.studyBreaks, key, state.subjects, state.logs);
   }
   function toggleAssignmentLock(taskId) {
     const index = state.lockedTasks.indexOf(taskId);
@@ -870,13 +870,13 @@
   }
   function detailTaskMarkup(task) {
     const color = task.subject?.color || '#9ba59b', oldDate = selectedDate < today;
-    const editableManual = task.custom && !task.done;
+    const editableManual = task.custom && !task.done && !task.studyBreak;
     return `<div class="detail-task ${task.done ? 'done' : ''}">
       <button class="task-check" data-toggle-task="${escapeHtml(task.id)}" data-task-date="${escapeHtml(selectedDate)}" data-checked="${task.done}" aria-label="${task.done ? 'Mark incomplete' : 'Mark complete'}">${task.done ? '✓' : ''}</button>
       <span class="task-color" style="--subject-color:${escapeHtml(color)}"></span>
       <div class="task-main"><strong>${escapeHtml(task.subject?.name || task.label)} — ${escapeHtml(task.rangeLabel || task.label)}</strong><small>${escapeHtml(task.description || 'Personal task')}${task.done ? ' · Completed' : ''}${task.custom ? ' · Manual task' : ''}</small></div>
-      <div><input type="number" min="${task.custom ? '0' : '1'}" step="${task.custom ? '0.5' : '1'}" value="${escapeHtml(task.quantity)}" data-task-quantity="${escapeHtml(task.id)}" aria-label="Planned amount" ${task.done || oldDate || task.custom ? 'disabled' : ''}/><span class="unit-label">${escapeHtml(task.unit)}</span></div>
-      ${task.done ? '<span class="unit-label">Done</span>' : task.curriculum ? `<span class="unit-label">${escapeHtml(ACTIVITY_LABELS[task.unit] || task.unit)}</span>` : editableManual ? `<div class="manual-task-actions"><button class="lock-task-button" data-edit-manual-task="${escapeHtml(task.id)}">Edit</button><button class="lock-task-button" data-delete-manual-task="${escapeHtml(task.id)}">Remove</button></div>` : task.custom ? '<span class="unit-label">Manual</span>' : oldDate ? '<span class="unit-label">Past assignment</span>' : `<button class="lock-task-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}">${task.locked ? '🔒 Locked' : '◇ Lock'}</button>`}
+      <div><input type="number" min="${task.custom ? '0' : '1'}" step="${task.custom ? '0.5' : '1'}" value="${escapeHtml(task.quantity)}" data-task-quantity="${escapeHtml(task.id)}" aria-label="Planned amount" ${task.done || oldDate || task.custom || task.studyBreak ? 'disabled' : ''}/><span class="unit-label">${escapeHtml(task.unit)}</span></div>
+      ${task.done ? '<span class="unit-label">Done</span>' : task.curriculum ? `<span class="unit-label">${escapeHtml(ACTIVITY_LABELS[task.unit] || task.unit)}</span>` : editableManual ? `<div class="manual-task-actions"><button class="lock-task-button" data-edit-manual-task="${escapeHtml(task.id)}">Edit</button><button class="lock-task-button" data-delete-manual-task="${escapeHtml(task.id)}">Remove</button></div>` : task.studyBreak ? '<span class="unit-label">Study break</span>' : task.custom ? '<span class="unit-label">Manual</span>' : oldDate ? '<span class="unit-label">Past assignment</span>' : `<button class="lock-task-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}">${task.locked ? '🔒 Locked' : '◇ Lock'}</button>`}
     </div>`;
   }
   function renderSubjectCurriculum(subject) {
@@ -915,7 +915,7 @@
       <div class="subject-stats"><div><span>Current position</span><strong>${escapeHtml(rangeInfo)}</strong></div><div><span>${subject.tracking === 'minutes' ? 'Time target' : 'Estimated finish'}</span><strong>${escapeHtml(subject.tracking === 'minutes' ? progress.remainingLabel : (prediction ? formatDate(prediction) : 'Add a range to predict'))}</strong></div></div>
       ${subject.milestones.length ? `<div class="subject-milestone-list"><div class="milestone-summary">Milestones · ${completedMilestones}/${subject.milestones.length}</div>${subject.milestones.map(item => `<label class="milestone-item ${item.completed ? 'complete' : ''}"><input type="checkbox" data-toggle-milestone="${escapeHtml(subject.id)}" data-milestone-id="${escapeHtml(item.id)}" ${item.completed ? 'checked' : ''}><span>${escapeHtml(item.title)}</span>${item.targetDate ? `<small>${escapeHtml(formatDate(item.targetDate))}</small>` : ''}</label>`).join('')}</div>` : ''}
       ${subject.chapters?.length ? renderSubjectCurriculum(subject) : ''}
-      <div class="subject-card-actions"><button class="mini-action" data-log-subject="${escapeHtml(subject.id)}">Log work</button><button class="mini-action" data-schedule-subject="${escapeHtml(subject.id)}" data-calendar-date="${escapeHtml(nextStudyDate())}">Schedule task</button><button class="mini-action" data-edit-subject="${escapeHtml(subject.id)}">Edit subject</button></div></article>`;
+      <div class='subject-card-actions'><button class='mini-action' data-log-subject='${escapeHtml(subject.id)}'>Log work</button><button class='mini-action' data-schedule-subject='${escapeHtml(subject.id)}' data-calendar-date='${escapeHtml(nextStudyDate())}'>Schedule task</button><button class='mini-action' data-study-break='${escapeHtml(subject.id)}'>${studyBreak ? 'End study break' : 'Study break'}</button><button class='mini-action' data-edit-subject='${escapeHtml(subject.id)}'>Edit subject</button></div>${studyBreak ? `<div class='study-break-status'><strong>${escapeHtml(studyBreak.name)}</strong> · ${studyBreak.dailyMinutes} min/day through ${escapeHtml(formatDate(studyBreak.endDate))}</div>` : ''}</article>`;
     }).join('') : `<div class="empty-state empty-subjects"><strong>${query ? 'No matching subjects' : 'No subjects yet'}</strong><p>${query ? 'Try another search.' : 'Add a subject and enter the curriculum details to start planning.'}</p><button class="primary-button" id="emptyAddSubject">＋ Add subject</button></div>`;
     $$('.subject-card').forEach(card => { if (openCurriculumIds.has(card.dataset.subjectCard)) { const details = card.querySelector('.subject-curriculum-details'); if (details) details.open = true; } });
   }
@@ -1199,6 +1199,45 @@
     });
   }
 
+  function openStudyBreak(subjectId) {
+    const subject = state.subjects.find(item => item.id === subjectId);
+    if (!subject) return;
+    const current = StudyBreaks.findForSubject(state.studyBreaks, subjectId, today);
+    if (current) {
+      if (!confirm(`End the study break for ${subject.name}? Its original schedule will become visible again.`)) return;
+      state.studyBreaks = state.studyBreaks.filter(item => item.id !== current.id);
+      saveState(); renderAll(); showToast('Study break ended. Your original schedule is restored.');
+      return;
+    }
+    const body = `<div class='subject-form-grid'>
+      <label class='field full'><span>Study break name</span><input id='studyBreakName' maxlength='80' value='Study Break' placeholder='e.g. Biology test preparation' /></label>
+      <label class='field'><span>Start date</span><input id='studyBreakStart' type='date' value='${today}' min='${today}' /></label>
+      <label class='field'><span>How many days?</span><input id='studyBreakDays' type='number' min='1' max='365' step='1' value='7' /></label>
+      <label class='field'><span>Study time per day (minutes)</span><input id='studyBreakMinutes' type='number' min='1' max='600' step='1' value='${subject.tracking === 'minutes' ? subject.dailyMinutes || 45 : 45}' /></label>
+    </div><p class='modal-help'>This temporarily replaces all scheduled work for ${escapeHtml(subject.name)} on every calendar day in the date range, including weekends and days off. Your original assignments are kept and return when the break ends.</p><p class='form-error' id='studyBreakError'></p>`;
+    const footer = `<div class='right-actions'><button class='outline-button' id='cancelStudyBreak'>Cancel</button><button class='primary-button' id='saveStudyBreak'>Start study break</button></div>`;
+    openModal('Start a study break', 'TEMPORARY SUBJECT SCHEDULE', body, footer);
+    $('#cancelStudyBreak').addEventListener('click', closeModal);
+    $('#saveStudyBreak').addEventListener('click', () => {
+      const startDate = $('#studyBreakStart').value;
+      const record = StudyBreaks.normalize({
+        id: makeId('study-break'), subjectId, name: $('#studyBreakName').value.trim() || 'Study Break',
+        startDate, durationDays: Number($('#studyBreakDays').value), dailyMinutes: Number($('#studyBreakMinutes').value),
+        createdAt: new Date().toISOString()
+      });
+      if (!record || startDate < today) {
+        $('#studyBreakError').textContent = 'Choose a valid start date, 1–365 days, and 1–600 minutes per day.';
+        return;
+      }
+      state.studyBreaks = state.studyBreaks.filter(item => item.subjectId !== subjectId || item.cancelled || item.endDate < startDate);
+      state.studyBreaks.push(record);
+      const persisted = saveState();
+      if (startDate <= today && record.endDate >= today) { selectedDate = today; calendarCursor = parseDate(today); }
+      closeModal(); renderAll();
+      if (!persisted) showToast('Study break started for this session, but browser saving failed.');
+      else showToast(`${record.name} scheduled for ${record.durationDays} days.`);
+    });
+  }
   function addManualTask(key, editingTask = null, presetSubjectId = '') {
     const task = editingTask ? { ...editingTask } : null;
     const selectedSubjectId = task?.subjectId || presetSubjectId || '';
@@ -2036,6 +2075,8 @@
       const qtyInput = $(`[data-task-quantity="${CSS.escape(id)}"]`);
       toggleTask(id, checked, qtyInput ? Number(qtyInput.value) : null, taskToggle.dataset.taskDate || selectedDate); return;
     }
+    const studyBreakButton = event.target.closest('[data-study-break]');
+    if (studyBreakButton) { openStudyBreak(studyBreakButton.dataset.studyBreak); return; }
     const edit = event.target.closest('[data-edit-subject]');
     if (edit) { const sub = state.subjects.find(s => s.id === edit.dataset.editSubject); if (sub) subjectForm(sub); return; }
     const log = event.target.closest('[data-log-subject]');
