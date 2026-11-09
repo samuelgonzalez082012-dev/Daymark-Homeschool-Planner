@@ -1,3 +1,15 @@
+Daymark V2.6 — Study Breaks
+
+Changes:
+- Added a subject-level Study Break action with a customizable label, start date, consecutive calendar-day duration, and daily minutes.
+- Study breaks create one calendar entry for every date in the selected range, including weekends and days off.
+- Temporarily replaces that subject's generated daily targets, dated curriculum activities, and manual tasks while leaving other subjects and personal tasks untouched.
+- Preserves the underlying schedule and restores it automatically after expiry or immediately when the user ends the break early.
+- Study-break sessions can be marked complete and are recorded in the activity log.
+- Added a reusable date-range and task-replacement helper plus Node built-in tests.
+
+Limits: 1–365 consecutive days and 1–600 minutes per day. Run `npm test` to execute the study-break unit tests.
+
 Daymark V2.5 — Local Ollama AI
 
 Changes:
