@@ -1,0 +1,18 @@
+Daymark V2.5 — Local Ollama AI
+
+Changes:
+- Replaced the paid Cloudflare/OpenAI Worker import path with a local Ollama connection.
+- Added a Python 3 standard-library companion server and Windows launcher.
+- Added automatic Ollama connection checks, installed model discovery, and vision capability filtering.
+- Added local image-to-structured-curriculum analysis through Ollama's /api/chat endpoint.
+- Added a selected model preference saved in Daymark settings.
+- Removed the obsolete ai-worker deployment folder and all Worker URL/token prompts from the import workflow.
+- Preserved the existing V2.4 planner, curriculum importer, subject templates, and weekly assignment move features.
+
+No OpenAI API key, paid API account, pip package, or automatic model download is required.
+
+Important: A text-only Qwen 27B model cannot read uploaded images. The import wizard will show only models Ollama identifies as vision-capable. The exact local model tag must be checked in the UI.
+
+Launch using Start-Daymark.bat, not by double-clicking index.html.
+
+- Added explicit rejection of Ollama cloud model tags so the image importer stays local-only.

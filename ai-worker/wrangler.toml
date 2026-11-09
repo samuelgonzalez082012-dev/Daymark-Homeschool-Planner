@@ -1,0 +1,10 @@
+name = "daymark-curriculum-import"
+main = "worker.js"
+compatibility_date = "2026-11-03"
+workers_dev = true
+
+[vars]
+# Set this to your deployed Daymark origin, or "null" when using file:// locally.
+# Avoid "*" for a deployed planner.
+ALLOWED_ORIGIN = "null"
+OPENAI_MODEL = "gpt-6-luna"

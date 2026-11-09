@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f2ed" />
+  <title>Daymark — Homeschool Planner</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark">d<span>·</span></div>
+        <div class="brand-copy"><strong>daymark</strong><small>HOMESCHOOL PLANNER</small></div>
+      </div>
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span><span>Overview</span></button>
+        <button class="nav-item" data-view="calendar"><span class="nav-icon">▦</span><span>Calendar</span></button>
+        <button class="nav-item" data-view="subjects"><span class="nav-icon">▤</span><span>Subjects</span><span class="nav-count" id="subjectCount">0</span></button>
+        <button class="nav-item" data-view="progress"><span class="nav-icon">◷</span><span>Progress</span></button>
+      </nav>
+      <div class="sidebar-label lower-label">PREFERENCES</div>
+      <nav class="nav-list">
+        <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="school-year-mini" id="schoolYearMini">
+        <div class="mini-eyebrow">YOUR SCHOOL YEAR</div>
+        <strong id="miniYearLabel">Set your dates</strong>
+        <div class="mini-progress"><span id="miniYearProgress"></span></div>
+        <small id="miniYearDates">Choose a start and end date</small>
+      </div>
+      <div class="sidebar-footer"><span class="status-dot"></span> Saved on this device</div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand"><div class="brand-mark">d<span>·</span></div><strong>daymark</strong></div>
+        <div class="breadcrumbs"><span>Workspace</span><span class="crumb-slash">/</span><strong id="currentSectionLabel">Overview</strong></div>
+        <div class="topbar-actions">
+          <div class="today-chip"><span class="today-dot"></span><span id="topDateLabel"></span></div>
+          <button class="outline-button" id="openPrint">▤ Print</button><button class="primary-button top-add" id="topAddSubject"><span>＋</span> Add subject</button>
+          <button class="icon-button mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button>
+        </div>
+      </header>
+
+      <section class="view active-view" id="view-overview">
+        <div class="page-heading overview-heading">
+          <div><div class="eyebrow" id="greetingEyebrow">YOUR LEARNING SPACE</div><h1 id="greetingTitle">A little progress, every day.</h1><p>Keep your subjects moving at a pace that works for you.</p></div>
+          <button class="quiet-button" id="jumpToday">Today <span>↗</span></button>
+        </div>
+        <div class="overview-grid" id="overviewGrid">
+          <div class="main-column">
+            <section class="panel today-panel">
+              <div class="panel-heading"><div><div class="eyebrow">DAILY PLAN</div><h2>Today's work</h2></div><button class="text-button" id="openToday">View day <span>→</span></button></div>
+              <div class="today-date-row"><strong id="todayLongDate"></strong><span id="todayStudyLabel" class="subtle-pill">Study day</span></div>
+              <div id="todayWorkloadWarning"></div><div id="todayTasks" class="task-list"></div>
+            </section>
+            <section class="panel calendar-preview-panel">
+              <div class="panel-heading"><div><div class="eyebrow">AT A GLANCE</div><h2>Coming up</h2></div><button class="text-button" data-go="calendar">Open calendar <span>→</span></button></div>
+              <div id="upcomingStrip" class="upcoming-strip"></div>
+            </section>
+          </div>
+          <div class="side-column">
+            <section class="panel progress-summary-panel">
+              <div class="panel-heading"><div><div class="eyebrow">THE BIG PICTURE</div><h2>School year</h2></div><span class="round-icon">✳</span></div>
+              <div class="year-progress-wrap"><div class="year-ring" id="yearRing"><div><strong id="yearPercent">0%</strong><small>elapsed</small></div></div><div class="year-progress-copy"><strong id="yearProgressTitle">Set your school year</strong><p id="yearProgressText">Add your dates in Settings to see your year at a glance.</p></div></div>
+              <div class="metric-divider"></div>
+              <div class="mini-stat-row"><span>Subjects</span><strong id="overviewSubjectTotal">0</strong></div>
+              <div class="mini-stat-row"><span>On track</span><strong id="overviewOnTrack">—</strong></div>
+              <button class="outline-button full-button" data-go="progress">See progress report</button>
+            </section>
+            <section class="panel subject-snapshot-panel"><div class="panel-heading"><div><div class="eyebrow">YOUR CURRICULUM</div><h2>Subject progress</h2></div><button class="tiny-plus" id="quickAddSubject" aria-label="Add a subject">＋</button></div><div id="subjectSnapshot" class="snapshot-list"></div></section>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-calendar">
+        <div class="page-heading calendar-heading"><div><div class="eyebrow">YOUR SCHEDULE</div><h1>Calendar</h1><p>See your daily assignments and shape your week.</p></div><div class="view-controls"><div class="segmented" id="calendarViewToggle"><button class="selected" data-calendar-view="month">Month</button><button data-calendar-view="week">Week</button></div><button class="primary-button" id="calendarAddTask">＋ Add task</button></div></div>
+        <section class="panel calendar-panel">
+          <div class="calendar-toolbar"><div class="calendar-month-controls"><button class="square-button" id="prevPeriod" aria-label="Previous period">‹</button><h2 id="calendarTitle"></h2><button class="square-button" id="nextPeriod" aria-label="Next period">›</button><button class="today-button" id="calendarToday">Today</button></div><div class="calendar-legend" id="calendarLegend"><span><i class="legend-dot"></i> Study day</span><span><i class="legend-dot day-off-dot"></i> Day off</span></div></div>
+          <div id="calendarGrid" class="calendar-grid month-grid"></div>
+          <div id="calendarUnscheduledSubjects" class="calendar-unscheduled-subjects"></div>
+          <div class="calendar-footnote"><span class="legend-dot selected-legend"></span> Selected day <span class="footnote-separator">·</span> Select any date to view or edit its workload</div>
+        </section>
+        <div class="calendar-detail panel" id="calendarDetail"></div>
+      </section>
+
+      <section class="view" id="view-subjects">
+        <div class="page-heading"><div><div class="eyebrow">WHAT YOU'RE LEARNING</div><h1>Subjects</h1><p>Set up each curriculum and keep your place as you go.</p></div><div class="view-controls"><button class="outline-button" id="importCurriculumButton">▧ Import curriculum</button><button class="primary-button" id="subjectsAdd"><span>＋</span> Add subject</button></div></div>
+        <div class="subject-toolbar"><div class="search-box"><span>⌕</span><input id="subjectSearch" placeholder="Find a subject or curriculum…" /></div><span class="muted-small" id="subjectCountLabel">0 subjects</span></div>
+        <div class="subject-grid" id="subjectGrid"></div>
+      </section>
+
+      <section class="view" id="view-progress">
+        <div class="page-heading"><div><div class="eyebrow">YOUR MOMENTUM</div><h1>Progress</h1><p>A clear picture of what's finished and what's still ahead.</p></div><div class="progress-export-actions"><button class="outline-button" id="progressExport">Export summary ↗</button><button class="outline-button" id="progressCsvExport">Export activity CSV ↓</button></div></div>
+        <div class="progress-top-cards" id="progressTopCards"></div>
+        <section class="panel progress-table-panel"><div class="panel-heading"><div><div class="eyebrow">SUBJECT BREAKDOWN</div><h2>Curriculum progress</h2></div></div><div class="table-wrap"><table class="progress-table"><thead><tr><th>SUBJECT</th><th>PROGRESS</th><th>COMPLETED</th><th>REMAINING</th><th>FINISH DATE</th><th>EST. FINISH</th><th>PRIORITY</th><th>PACE</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></section>
+        <section class="panel weekly-review-panel"><div class="panel-heading"><div><div class="eyebrow">WEEKLY REVIEW</div><h2 id="weeklyReviewTitle">This week's review</h2><p class="settings-help">A recap of planned and completed work for the selected week.</p></div><div class="week-review-controls"><button class="square-button" id="reviewPrevWeek" aria-label="Previous week">‹</button><button class="square-button" id="reviewCurrentWeek" aria-label="Current week">Today</button><button class="square-button" id="reviewNextWeek" aria-label="Next week">›</button></div></div><div id="weeklyReviewContent" class="weekly-review-content"></div></section>
+        <section class="panel progress-notes-panel"><div class="panel-heading"><div><div class="eyebrow">A NOTE ABOUT YOUR PLAN</div><h2>You're in control</h2></div><span class="round-icon">✳</span></div><p>Daymark updates future daily targets when your progress or dates change. Missed work is not automatically copied to another day. You decide whether to leave it, skip it, or add it to a different date.</p></section>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-heading"><div><div class="eyebrow">MAKE IT YOURS</div><h1>Settings</h1><p>Change your school plan and the way Daymark looks whenever you like.</p></div></div>
+        <div class="settings-layout">
+          <nav class="settings-nav" aria-label="Settings sections"><button class="selected" data-settings-tab="school">School year</button><button data-settings-tab="schedule">Study days</button><button data-settings-tab="appearance">Appearance & layout</button><button data-settings-tab="data">Data & backups</button></nav>
+          <div class="settings-content">
+            <section class="settings-section active-settings" id="settings-school"><div class="settings-section-heading"><div><h2>School year</h2><p>Choose the overall dates for your homeschool year.</p></div></div><div class="settings-card"><div class="field-grid two"><label class="field"><span>School year starts</span><input type="date" id="schoolStart" /></label><label class="field"><span>School year ends</span><input type="date" id="schoolEnd" /></label></div><div class="settings-inline-note"><span class="note-icon">i</span><p>Each subject can also have its own finish date. A subject's date can be earlier than your overall school-year end.</p></div><div class="settings-save-row"><span class="save-feedback" id="schoolSettingsFeedback"></span><button class="primary-button" id="saveSchoolDates">Save school dates</button></div></div></section>
+            <section class="settings-section" id="settings-schedule"><div class="settings-section-heading"><div><h2>Study days & days off</h2><p>Choose the days available for regular assignments.</p></div></div><div class="settings-card"><h3>Regular study days</h3><p class="settings-help">Daily targets are calculated using only the days you select.</p><div class="weekday-picker" id="weekdayPicker"></div><div class="field-grid two"><label class="field"><span>Preferred daily workload limit (minutes)</span><input type="number" id="maxDailyMinutes" min="0" max="600" step="5" /></label><div class="settings-inline-note limit-note"><span class="note-icon">i</span><p>Daymark estimates minutes using each subject's daily time estimate. Set this to 0 to turn off workload warnings.</p></div></div><div class="field-grid two holiday-fields"><label class="field"><span>Add a day off</span><input type="date" id="holidayDate" /></label><label class="field"><span>Label (optional)</span><input type="text" id="holidayLabel" placeholder="e.g. Family trip" /></label></div><button class="outline-button" id="addHoliday">＋ Add day off</button><div id="holidayList" class="holiday-list"></div><div class="settings-save-row"><span class="save-feedback" id="scheduleFeedback"></span><button class="primary-button" id="saveSchedule">Save schedule</button></div></div></section>
+            <section class="settings-section" id="settings-appearance"><div class="settings-section-heading"><div><h2>Appearance & layout</h2><p>All of these choices can be changed later. Your curriculum and progress stay untouched.</p></div><button class="text-button" id="resetAppearance">Reset to defaults</button></div>
+              <div class="settings-card"><h3>Look and feel</h3><div class="setting-option-row"><div><strong>Theme</strong><small>Choose how the app looks.</small></div><div class="segmented" id="themeChoices"><button data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button><button data-theme-choice="system">System</button></div></div>
+                <div class="setting-option-row"><div><strong>Interface density</strong><small>Adjust spacing across the app.</small></div><div class="segmented" id="densityChoices"><button data-density="comfortable">Comfortable</button><button data-density="balanced">Balanced</button><button data-density="compact">Compact</button></div></div>
+                <div class="setting-option-row"><div><strong>Accent color</strong><small>Choose the color used for highlights.</small></div><div class="color-choice"><input type="color" id="accentColor" value="#607d71" /><span id="accentColorLabel">#607D71</span></div></div>
+                <div class="setting-option-row"><div><strong>Calendar assignments</strong><small>Choose how tasks appear on calendar dates.</small></div><div class="segmented" id="calendarStyleChoices"><button data-calendar-style="blocks">Color blocks</button><button data-calendar-style="labels">Labels</button><button data-calendar-style="text">Text</button></div></div>
+                <div class="setting-option-row"><div><strong>Default calendar view</strong><small>Choose what opens when you visit Calendar.</small></div><div class="segmented" id="defaultCalendarChoices"><button data-default-calendar="month">Month</button><button data-default-calendar="week">Week</button></div></div>
+                <div class="setting-option-row"><div><strong>Dashboard focus</strong><small>Choose what gets the most space on Overview.</small></div><div class="segmented" id="dashboardChoices"><button data-dashboard="calendar">Calendar</button><button data-dashboard="today">Today's work</button><button data-dashboard="progress">Progress</button></div></div>
+                <div class="setting-option-row"><div><strong>Sidebar width</strong><small>Give navigation a little more or less room.</small></div><input class="range-input" type="range" id="sidebarWidth" min="220" max="300" step="10" value="250" /></div>
+                <div class="setting-option-row scale-setting-row"><div><strong>App scale <output id="appScaleValue">100%</output></strong><small>Make the entire app larger or smaller. Changes apply immediately.</small></div><input class="range-input scale-range" type="range" id="appScale" min="80" max="150" step="5" value="100" /></div>
+              </div>
+              <div class="settings-card"><div class="card-heading-inline"><div><h3>Display preferences</h3><p class="settings-help">Fine-tune the details.</p></div></div><div class="field-grid two"><label class="field"><span>Font size</span><select id="fontSize"><option value="small">Small</option><option value="normal">Default</option><option value="large">Large</option></select></label><label class="field"><span>Date format</span><select id="dateFormat"><option value="long">November 2, 2026</option><option value="short">Nov 2, 2026</option><option value="numeric">11/02/2026</option><option value="iso">2026-11-02</option></select></label><label class="field"><span>Clock format</span><select id="clockFormat"><option value="12">12-hour</option><option value="24">24-hour</option></select></label></div></div>
+              <div class="settings-card"><div class="card-heading-inline"><div><h3>Subject colors</h3><p class="settings-help">Change a subject's color in its edit window.</p></div></div><div id="subjectColorSettings" class="subject-color-settings"></div></div>
+            </section>
+            <section class="settings-section" id="settings-data"><div class="settings-section-heading"><div><h2>Data & backups</h2><p>Your planner is saved locally in this browser on this device.</p></div></div><div class="settings-card"><div class="data-action-row"><div><strong>Export a backup</strong><small>Save your subjects, schedule, and settings to a JSON file.</small></div><button class="outline-button" id="exportBackup">Download backup</button></div><div class="data-action-row"><div><strong>Restore from backup</strong><small>Load a Daymark JSON backup. This replaces the current planner data.</small></div><label class="outline-button file-button">Choose file<input type="file" id="importBackup" accept="application/json,.json" /></label></div><div class="data-action-row danger-row"><div><strong>Clear planner data</strong><small>Remove all subjects, schedule details, and preferences from this browser.</small></div><button class="danger-button" id="clearData">Clear data</button></div><p class="settings-help storage-note">Tip: export a backup before clearing browser data or moving to another device.</p></div></section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-header"><div><div class="eyebrow" id="modalEyebrow">SUBJECT SETUP</div><h2 id="modalTitle">Add a subject</h2></div><button class="modal-close" id="modalClose" aria-label="Close">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></section>
+  </div>
+  <div class="modal-backdrop" id="printBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="printModalTitle">
+      <div class="modal-header"><div><div class="eyebrow">PRINT & EXPORT</div><h2 id="printModalTitle">Print your planner</h2></div><button class="modal-close" id="printClose" aria-label="Close">×</button></div>
+      <div class="modal-body">
+        <div class="field-grid two">
+          <label class="field"><span>What would you like to print?</span><select id="printMode"><option value="blank">Blank schedule</option><option value="planned">Planned schedule</option><option value="completed">Completed work log</option></select></label>
+          <label class="field"><span>Time period</span><select id="printRange"><option value="week">Selected week</option><option value="month">Selected month</option><option value="all">All logged activity</option></select></label>
+        </div>
+        <div class="print-range-note" id="printRangeNote">The week containing your selected calendar date will be printed.</div>
+        <div class="print-options">
+          <label class="print-check"><input type="checkbox" id="printStats" checked><span><strong>Include statistics</strong><small>Show totals and subject progress where available.</small></span></label>
+          <label class="print-check"><input type="checkbox" id="printNotes" checked><span><strong>Include notes</strong><small>Include daily notes and notes attached to completed work.</small></span></label>
+          <label class="print-check"><input type="checkbox" id="printSubjectSummary" checked><span><strong>Include subject summary</strong><small>Show each subject's curriculum and current progress.</small></span></label>
+          <label class="print-check"><input type="checkbox" id="printWeeklyReview" checked><span><strong>Include weekly review</strong><small>Add a summary of assignments, completed work, and time logged for the selected week.</small></span></label>
+        </div>
+        <p class="modal-help">A print preview will open. Choose your printer, or select “Save as PDF” in your browser's print dialog.</p>
+      </div>
+      <div class="modal-footer"><span class="form-error" id="printError"></span><div class="right-actions"><button class="outline-button" id="printCancel">Cancel</button><button class="primary-button" id="printNow">Open print preview</button></div></div>
+    </section>
+  </div>
+  <section id="printOutput" aria-hidden="true"></section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="hiddenImport" accept="application/json" hidden /><input type="file" id="hiddenCurriculumFiles" accept="image/*,.pdf,application/pdf" multiple hidden />
+  <script src="app.js"></script>
+</body>
+</html>
