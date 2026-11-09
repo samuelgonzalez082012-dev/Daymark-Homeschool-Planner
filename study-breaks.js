@@ -63,7 +63,7 @@
     return null;
   }
 
-  function applyToTasks(tasks, records, key, subjects) {
+  function applyToTasks(tasks, records, key, subjects, logs = []) {
     let result = Array.isArray(tasks) ? tasks.slice() : [];
     for (const subject of subjects || []) {
       const record = findForSubject(records, subject.id, key);
@@ -79,7 +79,8 @@
         quantity: record.dailyMinutes,
         unit: 'minutes',
         estimatedMinutes: record.dailyMinutes,
-        done: false,
+        done: (logs || []).some(log => log.taskId === `study-break:${record.id}:${key}`),
+        doneLog: (logs || []).find(log => log.taskId === `study-break:${record.id}:${key}`) || null,
         custom: true,
         studyBreak: true,
         breakName: record.name
