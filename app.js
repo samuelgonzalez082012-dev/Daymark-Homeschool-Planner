@@ -904,7 +904,7 @@
       const meta = subject.tracking === 'minutes' ? `${subject.dailyMinutes || 50} min per study day` : subject.metrics.map(item => item.unit).filter(Boolean).join(' + ') || 'Targets not set';
       const rangeInfo = subject.metrics.some(validMetric) ? subject.metrics.filter(validMetric).map(item => `${escapeHtml(item.label)}: ${formatNumber(item.next)} → ${formatNumber(item.end)}`).join(' · ') : 'Set a starting position and finish point to calculate daily targets';
       const completedMilestones = subject.milestones.filter(item => item.completed).length;
-      const studyBreak = StudyBreaks.findForSubject(state.studyBreaks, subject.id, today);
+      const studyBreak = StudyBreaks.findUpcomingForSubject(state.studyBreaks, subject.id, today);
       const hasDatedCurriculum = (subject.chapters || []).some(chapter => chapter.plannedDate || (chapter.activities || []).some(activity => activity.plannedDate));
       const hasTrackerSchedule = !!getDeadline(subject) && getDeadline(subject) >= today && (subject.tracking === 'minutes' || subject.metrics.some(validMetric));
       const scheduleReady = hasDatedCurriculum || hasTrackerSchedule;
@@ -915,7 +915,7 @@
       <div class="subject-stats"><div><span>Current position</span><strong>${escapeHtml(rangeInfo)}</strong></div><div><span>${subject.tracking === 'minutes' ? 'Time target' : 'Estimated finish'}</span><strong>${escapeHtml(subject.tracking === 'minutes' ? progress.remainingLabel : (prediction ? formatDate(prediction) : 'Add a range to predict'))}</strong></div></div>
       ${subject.milestones.length ? `<div class="subject-milestone-list"><div class="milestone-summary">Milestones · ${completedMilestones}/${subject.milestones.length}</div>${subject.milestones.map(item => `<label class="milestone-item ${item.completed ? 'complete' : ''}"><input type="checkbox" data-toggle-milestone="${escapeHtml(subject.id)}" data-milestone-id="${escapeHtml(item.id)}" ${item.completed ? 'checked' : ''}><span>${escapeHtml(item.title)}</span>${item.targetDate ? `<small>${escapeHtml(formatDate(item.targetDate))}</small>` : ''}</label>`).join('')}</div>` : ''}
       ${subject.chapters?.length ? renderSubjectCurriculum(subject) : ''}
-      <div class='subject-card-actions'><button class='mini-action' data-log-subject='${escapeHtml(subject.id)}'>Log work</button><button class='mini-action' data-schedule-subject='${escapeHtml(subject.id)}' data-calendar-date='${escapeHtml(nextStudyDate())}'>Schedule task</button><button class='mini-action' data-study-break='${escapeHtml(subject.id)}'>${studyBreak ? 'End study break' : 'Study break'}</button><button class='mini-action' data-edit-subject='${escapeHtml(subject.id)}'>Edit subject</button></div>${studyBreak ? `<div class='study-break-status'><strong>${escapeHtml(studyBreak.name)}</strong> · ${studyBreak.dailyMinutes} min/day through ${escapeHtml(formatDate(studyBreak.endDate))}</div>` : ''}</article>`;
+      <div class='subject-card-actions'><button class='mini-action' data-log-subject='${escapeHtml(subject.id)}'>Log work</button><button class='mini-action' data-schedule-subject='${escapeHtml(subject.id)}' data-calendar-date='${escapeHtml(nextStudyDate())}'>Schedule task</button><button class='mini-action' data-study-break='${escapeHtml(subject.id)}'>${studyBreak ? (studyBreak.startDate > today ? 'Cancel study break' : 'End study break') : 'Study break'}</button><button class='mini-action' data-edit-subject='${escapeHtml(subject.id)}'>Edit subject</button></div>${studyBreak ? `<div class='study-break-status'><strong>${escapeHtml(studyBreak.name)}</strong> · ${studyBreak.startDate > today ? `Starts ${escapeHtml(formatDate(studyBreak.startDate))}` : `${studyBreak.dailyMinutes} min/day`} · through ${escapeHtml(formatDate(studyBreak.endDate))}</div>` : ''}</article>`;
     }).join('') : `<div class="empty-state empty-subjects"><strong>${query ? 'No matching subjects' : 'No subjects yet'}</strong><p>${query ? 'Try another search.' : 'Add a subject and enter the curriculum details to start planning.'}</p><button class="primary-button" id="emptyAddSubject">＋ Add subject</button></div>`;
     $$('.subject-card').forEach(card => { if (openCurriculumIds.has(card.dataset.subjectCard)) { const details = card.querySelector('.subject-curriculum-details'); if (details) details.open = true; } });
   }
@@ -1202,7 +1202,7 @@
   function openStudyBreak(subjectId) {
     const subject = state.subjects.find(item => item.id === subjectId);
     if (!subject) return;
-    const current = StudyBreaks.findForSubject(state.studyBreaks, subjectId, today);
+    const current = StudyBreaks.findUpcomingForSubject(state.studyBreaks, subjectId, today);
     if (current) {
       if (!confirm(`End the study break for ${subject.name}? Its original schedule will become visible again.`)) return;
       state.studyBreaks = state.studyBreaks.filter(item => item.id !== current.id);
