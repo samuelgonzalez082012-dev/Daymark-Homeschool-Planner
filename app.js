@@ -2,6 +2,7 @@
 (() => {
   'use strict';
 
+  const StudyBreaks = window.DaymarkStudyBreaks;
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'daymark-planner-v1';
@@ -96,7 +97,7 @@
   }
   function defaultState() {
     return {
-      version: 7,
+      version: 8,
       settings: {
         schoolStart: '', schoolEnd: '', weekdays: [1, 2, 3, 4, 5], holidays: [],
         theme: 'light', density: 'balanced', accent: '#607d71', calendarStyle: 'blocks',
@@ -105,7 +106,7 @@
         curriculumOllamaModel: ''
       },
       subjects: starterSubjects(), logs: [], manualTasks: [], taskOverrides: {}, lockedTasks: [], planSnapshots: {}, dayNotes: {},
-      taskMoves: {}, curriculumTemplates: defaultCurriculumTemplates()
+      taskMoves: {}, studyBreaks: [], curriculumTemplates: defaultCurriculumTemplates()
     };
   }
   function loadState() {
@@ -133,7 +134,7 @@
       settings.curriculumOllamaModel = String(settings.curriculumOllamaModel || '');
       settings.maxDailyMinutes = clamp(Number(settings.maxDailyMinutes) || 0, 0, 600);
       return {
-        ...base, ...parsed, version: 7, settings,
+        ...base, ...parsed, version: 8, settings,
         subjects: Array.isArray(parsed.subjects) ? parsed.subjects.filter(item => item && typeof item === 'object').map(normalizeSubject) : base.subjects,
         logs: Array.isArray(parsed.logs) ? parsed.logs.filter(item => item && typeof item === 'object') : [],
         manualTasks: Array.isArray(parsed.manualTasks) ? parsed.manualTasks.filter(item => item && typeof item === 'object') : [],
@@ -142,6 +143,7 @@
         planSnapshots: parsed.planSnapshots && typeof parsed.planSnapshots === 'object' ? parsed.planSnapshots : {},
         dayNotes: parsed.dayNotes && typeof parsed.dayNotes === 'object' ? parsed.dayNotes : {},
         taskMoves: parsed.taskMoves && typeof parsed.taskMoves === 'object' ? parsed.taskMoves : {},
+        studyBreaks: StudyBreaks.normalizeAll(parsed.studyBreaks),
         curriculumTemplates: Array.isArray(parsed.curriculumTemplates) ? parsed.curriculumTemplates.filter(t => t && typeof t === 'object').map(normalizeCurriculumTemplate) : base.curriculumTemplates
       };
     } catch (error) {
@@ -579,7 +581,7 @@
       label: task.title, description: task.subjectId ? (state.subjects.find(s => s.id === task.subjectId)?.curriculum || '') : 'Custom task',
       quantity: Number(task.quantity) || 0, unit: task.unit || 'tasks', done: !!task.done, metric: null, custom: true, task
     }));
-    return [...generated, ...curriculum, ...manual];
+    return StudyBreaks.applyToTasks([...generated, ...curriculum, ...manual], state.studyBreaks, key, state.subjects);
   }
   function toggleAssignmentLock(taskId) {
     const index = state.lockedTasks.indexOf(taskId);
@@ -902,6 +904,7 @@
       const meta = subject.tracking === 'minutes' ? `${subject.dailyMinutes || 50} min per study day` : subject.metrics.map(item => item.unit).filter(Boolean).join(' + ') || 'Targets not set';
       const rangeInfo = subject.metrics.some(validMetric) ? subject.metrics.filter(validMetric).map(item => `${escapeHtml(item.label)}: ${formatNumber(item.next)} → ${formatNumber(item.end)}`).join(' · ') : 'Set a starting position and finish point to calculate daily targets';
       const completedMilestones = subject.milestones.filter(item => item.completed).length;
+      const studyBreak = StudyBreaks.findForSubject(state.studyBreaks, subject.id, today);
       const hasDatedCurriculum = (subject.chapters || []).some(chapter => chapter.plannedDate || (chapter.activities || []).some(activity => activity.plannedDate));
       const hasTrackerSchedule = !!getDeadline(subject) && getDeadline(subject) >= today && (subject.tracking === 'minutes' || subject.metrics.some(validMetric));
       const scheduleReady = hasDatedCurriculum || hasTrackerSchedule;
@@ -1317,7 +1320,7 @@
   function getAllDayTasksForPrint(key) {
     const live = getAllDayTasks(key);
     const liveIds = new Set(live.map(task => task.id));
-    const completedPast = state.logs.filter(log => log.date === key && log.taskId && !liveIds.has(log.taskId)).map(log => {
+    const completedPast = state.logs.filter(log => log.date === key && log.taskId && !liveIds.has(log.taskId) && !StudyBreaks.findForSubject(state.studyBreaks, log.subjectId, key)).map(log => {
       const subject = state.subjects.find(s => s.id === log.subjectId) || null;
       return { id: log.taskId, subject, label: log.label, rangeLabel: log.rangeLabel || log.label, quantity: log.quantity, unit: log.unit, done: true };
     });
