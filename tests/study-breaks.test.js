@@ -72,3 +72,39 @@ test('uses the most recently configured active break for a subject', () => {
   const second = record({ id: 'second', name: 'Second', createdAt: '2026-11-02' });
   assert.equal(breaks.findForSubject([first, second], 'biology', '2026-11-14').id, 'second');
 });
+
+test('creates one entry on every calendar day in the range, including weekend dates', () => {
+  const biology = { id: 'biology', name: 'Biology' };
+  const math = { id: 'math', name: 'Math' };
+  const originalTasks = [
+    { id: 'biology-original', subject: biology, label: 'Biology lesson' },
+    { id: 'math-original', subject: math, label: 'Math lesson' },
+    { id: 'personal', subject: null, label: 'Personal task' }
+  ];
+
+  for (const key of ['2026-11-13', '2026-11-14', '2026-11-15']) {
+    const result = breaks.applyToTasks(originalTasks, [record()], key, [biology, math]);
+    const entry = result.find(task => task.studyBreak);
+    assert.ok(entry, `expected a study-break entry on ${key}`);
+    assert.equal(entry.date, key);
+    assert.equal(entry.rangeLabel, 'Biology revision: 45 minutes');
+    assert.deepEqual(result.filter(task => task.id !== entry.id), originalTasks.slice(1));
+  }
+});
+
+test('removing a break record to cancel it restores the exact original subject assignments', () => {
+  const biology = { id: 'biology', name: 'Biology' };
+  const originalTasks = [
+    { id: 'target-1', subject: biology, label: 'Daily target', quantity: 30 },
+    { id: 'curriculum-1', subject: biology, label: 'Chapter activity', quantity: 1 }
+  ];
+
+  const duringBreak = breaks.applyToTasks(originalTasks, [record()], '2026-11-14', [biology]);
+  assert.equal(duringBreak.length, 1);
+  assert.equal(duringBreak[0].studyBreak, true);
+
+  const afterCancellation = breaks.applyToTasks(originalTasks, [], '2026-11-14', [biology]);
+  assert.deepEqual(afterCancellation, originalTasks);
+  assert.equal(originalTasks[0].quantity, 30);
+  assert.equal(originalTasks[1].label, 'Chapter activity');
+});
