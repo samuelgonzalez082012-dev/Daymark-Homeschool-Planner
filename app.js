@@ -2,6 +2,7 @@
 (() => {
   'use strict';
 
+  const StudyBreaks = window.DaymarkStudyBreaks;
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'daymark-planner-v1';
@@ -96,7 +97,7 @@
   }
   function defaultState() {
     return {
-      version: 7,
+      version: 8,
       settings: {
         schoolStart: '', schoolEnd: '', weekdays: [1, 2, 3, 4, 5], holidays: [],
         theme: 'light', density: 'balanced', accent: '#607d71', calendarStyle: 'blocks',
@@ -105,7 +106,7 @@
         curriculumOllamaModel: ''
       },
       subjects: starterSubjects(), logs: [], manualTasks: [], taskOverrides: {}, lockedTasks: [], planSnapshots: {}, dayNotes: {},
-      taskMoves: {}, curriculumTemplates: defaultCurriculumTemplates()
+      taskMoves: {}, studyBreaks: [], curriculumTemplates: defaultCurriculumTemplates()
     };
   }
   function loadState() {
@@ -133,7 +134,7 @@
       settings.curriculumOllamaModel = String(settings.curriculumOllamaModel || '');
       settings.maxDailyMinutes = clamp(Number(settings.maxDailyMinutes) || 0, 0, 600);
       return {
-        ...base, ...parsed, version: 7, settings,
+        ...base, ...parsed, version: 8, settings,
         subjects: Array.isArray(parsed.subjects) ? parsed.subjects.filter(item => item && typeof item === 'object').map(normalizeSubject) : base.subjects,
         logs: Array.isArray(parsed.logs) ? parsed.logs.filter(item => item && typeof item === 'object') : [],
         manualTasks: Array.isArray(parsed.manualTasks) ? parsed.manualTasks.filter(item => item && typeof item === 'object') : [],
@@ -142,6 +143,7 @@
         planSnapshots: parsed.planSnapshots && typeof parsed.planSnapshots === 'object' ? parsed.planSnapshots : {},
         dayNotes: parsed.dayNotes && typeof parsed.dayNotes === 'object' ? parsed.dayNotes : {},
         taskMoves: parsed.taskMoves && typeof parsed.taskMoves === 'object' ? parsed.taskMoves : {},
+        studyBreaks: StudyBreaks.normalizeAll(parsed.studyBreaks),
         curriculumTemplates: Array.isArray(parsed.curriculumTemplates) ? parsed.curriculumTemplates.filter(t => t && typeof t === 'object').map(normalizeCurriculumTemplate) : base.curriculumTemplates
       };
     } catch (error) {
@@ -579,7 +581,7 @@
       label: task.title, description: task.subjectId ? (state.subjects.find(s => s.id === task.subjectId)?.curriculum || '') : 'Custom task',
       quantity: Number(task.quantity) || 0, unit: task.unit || 'tasks', done: !!task.done, metric: null, custom: true, task
     }));
-    return [...generated, ...curriculum, ...manual];
+    return StudyBreaks.applyToTasks([...generated, ...curriculum, ...manual], state.studyBreaks, key, state.subjects, state.logs);
   }
   function toggleAssignmentLock(taskId) {
     const index = state.lockedTasks.indexOf(taskId);
@@ -676,7 +678,7 @@
         manual.done = false;
       }
     } else {
-      const task = getAllDayTasks(selectedDate).find(item => item.id === taskId) || findTaskByIdAcrossDates(taskId);
+      const task = getAllDayTasks(taskDate || selectedDate).find(item => item.id === taskId) || findTaskByIdAcrossDates(taskId);
       if (!task) return;
       const existing = logForTask(taskId);
       const actualTaskDate = task.date || taskId.split(':')[1];
@@ -774,7 +776,7 @@
     return `<div class="task-row ${task.done ? 'done' : ''}">
       <button class="task-check" data-toggle-task="${escapeHtml(task.id)}" data-task-date="${escapeHtml(task.date || today)}" data-checked="${task.done}" aria-label="${task.done ? 'Mark incomplete' : 'Mark complete'}">${task.done ? '✓' : ''}</button>
       <span class="task-color" style="--subject-color:${escapeHtml(subjectColor)}"></span>
-      <div class="task-main"><strong>${escapeHtml(task.subject?.name || task.label)}</strong><small>${escapeHtml(task.subject ? (task.rangeLabel || task.label) : (task.description || 'Personal task'))}${task.custom ? ' · Custom task' : ''}</small></div>
+      <div class="task-main"><strong>${escapeHtml(task.subject?.name || task.label)}</strong><small>${escapeHtml(task.subject ? (task.rangeLabel || task.label) : (task.description || 'Personal task'))}${task.studyBreak ? ' · Study break' : task.custom ? ' · Custom task' : ''}</small></div>
       <span class="task-amount">${formatNumber(task.quantity)} ${escapeHtml(task.unit)}</span>
     </div>`;
   }
@@ -806,7 +808,7 @@
       const events = tasks.slice(0, 3).map(task => {
         const color = task.subject?.color || '#a1aaa0', style = state.settings.calendarStyle;
         const bg = style === 'blocks' ? hexToRgba(color, .15) : 'transparent';
-        return `<div class="calendar-event ${style === 'labels' ? 'label-style' : style === 'text' ? 'text-style' : ''}" style="--event-bg:${bg};--event-text:${escapeHtml(color)}">${escapeHtml(task.subject?.name || task.label)}${style === 'blocks' ? ` · ${formatNumber(task.quantity)} ${escapeHtml(task.unit)}` : ''}${task.done ? ' ✓' : ''}</div>`;
+        return `<div class="calendar-event ${style === 'labels' ? 'label-style' : style === 'text' ? 'text-style' : ''}" style="--event-bg:${bg};--event-text:${escapeHtml(color)}">${escapeHtml(task.studyBreak ? task.rangeLabel : (task.subject?.name || task.label))}${style === 'blocks' && !task.studyBreak ? ` · ${formatNumber(task.quantity)} ${escapeHtml(task.unit)}` : ''}${task.done ? ' ✓' : ''}</div>`;
       }).join('');
       return `<button class="calendar-cell ${classes}" data-calendar-date="${key}"><span class="calendar-day-number">${d.getDate()}</span><div class="calendar-events">${events}</div>${tasks.length > 3 ? `<div class="calendar-more">+${tasks.length - 3} more</div>` : ''}${holiday ? `<div class="cell-day-off">${escapeHtml(holiday.label || 'Day off')}</div>` : ''}</button>`;
     }).join('');
@@ -840,7 +842,7 @@
     }).join('');
     const body = rows.map(row => `<tr><th scope="row"><span class="week-subject-name">${escapeHtml(row.label)}</span>${row.subject ? `<small>${escapeHtml(priorityLabel(row.subject.priority))} priority</small>` : '<small>Other activities</small>'}</th>${dateKeys.map(key => {
       const tasks = getAllDayTasks(key).filter(task => row.subject ? task.subject?.id === row.id : !task.subject);
-      const taskHtml = tasks.map(task => `<div class="week-assignment ${task.done ? 'done' : ''} ${task.moved ? 'moved-assignment' : ''}" ${task.done ? '' : `draggable="true" data-drag-task="${escapeHtml(task.id)}" data-drag-date="${key}"`} title="${task.done ? 'Completed assignment' : 'Drag to another day or use Move'}"><button class="week-assignment-open" data-calendar-date="${key}" aria-label="Open ${escapeHtml(task.subject?.name || task.label)} on ${key}"><span>${escapeHtml(task.rangeLabel || task.label)}</span><small>${formatNumber(task.quantity)} ${escapeHtml(task.unit)}</small></button>${task.done ? '<span class="week-done-mark" title="Completed">✓</span>' : `<button class="week-move-button" data-move-task="${escapeHtml(task.id)}" data-move-date="${key}" title="Move assignment to another date" aria-label="Move assignment">↗</button>`}${task.done ? '' : (task.custom || task.curriculum) ? '<span class="week-manual-mark">•</span>' : key < today ? '<span class="week-history-mark">Past</span>' : `<button class="week-lock-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}" title="${task.locked ? 'Unlock assignment' : 'Lock assignment'}" aria-label="${task.locked ? 'Unlock' : 'Lock'} assignment">${task.locked ? '🔒' : '◇'}</button>`}</div>`).join('');
+      const taskHtml = tasks.map(task => `<div class="week-assignment ${task.done ? 'done' : ''} ${task.moved ? 'moved-assignment' : ''}" ${task.done || task.studyBreak ? '' : `draggable="true" data-drag-task="${escapeHtml(task.id)}" data-drag-date="${key}"`} title="${task.done ? 'Completed assignment' : task.studyBreak ? 'Temporary study break' : 'Drag to another day or use Move'}"><button class="week-assignment-open" data-calendar-date="${key}" aria-label="Open ${escapeHtml(task.subject?.name || task.label)} on ${key}"><span>${escapeHtml(task.rangeLabel || task.label)}</span><small>${formatNumber(task.quantity)} ${escapeHtml(task.unit)}</small></button>${task.done ? '<span class="week-done-mark" title="Completed">✓</span>' : task.studyBreak ? '<span class="week-manual-mark" title="Study break">✦</span>' : `<button class="week-move-button" data-move-task="${escapeHtml(task.id)}" data-move-date="${key}" title="Move assignment to another date" aria-label="Move assignment">↗</button>`}${task.done || task.studyBreak ? '' : (task.custom || task.curriculum) ? '<span class="week-manual-mark">•</span>' : key < today ? '<span class="week-history-mark">Past</span>' : `<button class="week-lock-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}" title="${task.locked ? 'Unlock assignment' : 'Lock assignment'}" aria-label="${task.locked ? 'Unlock' : 'Lock'} assignment">${task.locked ? '🔒' : '◇'}</button>`}</div>`).join('');
       const emptyCellButton = row.subject
         ? `<button class="week-empty-cell" data-schedule-subject="${escapeHtml(row.id)}" data-calendar-date="${key}" aria-label="Add ${escapeHtml(row.label)} work on ${key}">＋</button>`
         : `<button class="week-empty-cell" data-calendar-date="${key}" aria-label="Open ${key}">＋</button>`;
@@ -868,13 +870,13 @@
   }
   function detailTaskMarkup(task) {
     const color = task.subject?.color || '#9ba59b', oldDate = selectedDate < today;
-    const editableManual = task.custom && !task.done;
+    const editableManual = task.custom && !task.done && !task.studyBreak;
     return `<div class="detail-task ${task.done ? 'done' : ''}">
       <button class="task-check" data-toggle-task="${escapeHtml(task.id)}" data-task-date="${escapeHtml(selectedDate)}" data-checked="${task.done}" aria-label="${task.done ? 'Mark incomplete' : 'Mark complete'}">${task.done ? '✓' : ''}</button>
       <span class="task-color" style="--subject-color:${escapeHtml(color)}"></span>
-      <div class="task-main"><strong>${escapeHtml(task.subject?.name || task.label)} — ${escapeHtml(task.rangeLabel || task.label)}</strong><small>${escapeHtml(task.description || 'Personal task')}${task.done ? ' · Completed' : ''}${task.custom ? ' · Manual task' : ''}</small></div>
-      <div><input type="number" min="${task.custom ? '0' : '1'}" step="${task.custom ? '0.5' : '1'}" value="${escapeHtml(task.quantity)}" data-task-quantity="${escapeHtml(task.id)}" aria-label="Planned amount" ${task.done || oldDate || task.custom ? 'disabled' : ''}/><span class="unit-label">${escapeHtml(task.unit)}</span></div>
-      ${task.done ? '<span class="unit-label">Done</span>' : task.curriculum ? `<span class="unit-label">${escapeHtml(ACTIVITY_LABELS[task.unit] || task.unit)}</span>` : editableManual ? `<div class="manual-task-actions"><button class="lock-task-button" data-edit-manual-task="${escapeHtml(task.id)}">Edit</button><button class="lock-task-button" data-delete-manual-task="${escapeHtml(task.id)}">Remove</button></div>` : task.custom ? '<span class="unit-label">Manual</span>' : oldDate ? '<span class="unit-label">Past assignment</span>' : `<button class="lock-task-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}">${task.locked ? '🔒 Locked' : '◇ Lock'}</button>`}
+      <div class="task-main"><strong>${escapeHtml(task.subject?.name || task.label)} — ${escapeHtml(task.rangeLabel || task.label)}</strong><small>${escapeHtml(task.description || 'Personal task')}${task.done ? ' · Completed' : ''}${task.studyBreak ? ' · Study break' : task.custom ? ' · Manual task' : ''}</small></div>
+      <div><input type="number" min="${task.custom ? '0' : '1'}" step="${task.custom ? '0.5' : '1'}" value="${escapeHtml(task.quantity)}" data-task-quantity="${escapeHtml(task.id)}" aria-label="Planned amount" ${task.done || oldDate || task.custom || task.studyBreak ? 'disabled' : ''}/><span class="unit-label">${escapeHtml(task.unit)}</span></div>
+      ${task.done ? '<span class="unit-label">Done</span>' : task.curriculum ? `<span class="unit-label">${escapeHtml(ACTIVITY_LABELS[task.unit] || task.unit)}</span>` : editableManual ? `<div class="manual-task-actions"><button class="lock-task-button" data-edit-manual-task="${escapeHtml(task.id)}">Edit</button><button class="lock-task-button" data-delete-manual-task="${escapeHtml(task.id)}">Remove</button></div>` : task.studyBreak ? '<span class="unit-label">Study break</span>' : task.custom ? '<span class="unit-label">Manual</span>' : oldDate ? '<span class="unit-label">Past assignment</span>' : `<button class="lock-task-button ${task.locked ? 'locked' : ''}" data-lock-task="${escapeHtml(task.id)}">${task.locked ? '🔒 Locked' : '◇ Lock'}</button>`}
     </div>`;
   }
   function renderSubjectCurriculum(subject) {
@@ -902,6 +904,7 @@
       const meta = subject.tracking === 'minutes' ? `${subject.dailyMinutes || 50} min per study day` : subject.metrics.map(item => item.unit).filter(Boolean).join(' + ') || 'Targets not set';
       const rangeInfo = subject.metrics.some(validMetric) ? subject.metrics.filter(validMetric).map(item => `${escapeHtml(item.label)}: ${formatNumber(item.next)} → ${formatNumber(item.end)}`).join(' · ') : 'Set a starting position and finish point to calculate daily targets';
       const completedMilestones = subject.milestones.filter(item => item.completed).length;
+      const studyBreak = StudyBreaks.findUpcomingForSubject(state.studyBreaks, subject.id, today);
       const hasDatedCurriculum = (subject.chapters || []).some(chapter => chapter.plannedDate || (chapter.activities || []).some(activity => activity.plannedDate));
       const hasTrackerSchedule = !!getDeadline(subject) && getDeadline(subject) >= today && (subject.tracking === 'minutes' || subject.metrics.some(validMetric));
       const scheduleReady = hasDatedCurriculum || hasTrackerSchedule;
@@ -912,7 +915,7 @@
       <div class="subject-stats"><div><span>Current position</span><strong>${escapeHtml(rangeInfo)}</strong></div><div><span>${subject.tracking === 'minutes' ? 'Time target' : 'Estimated finish'}</span><strong>${escapeHtml(subject.tracking === 'minutes' ? progress.remainingLabel : (prediction ? formatDate(prediction) : 'Add a range to predict'))}</strong></div></div>
       ${subject.milestones.length ? `<div class="subject-milestone-list"><div class="milestone-summary">Milestones · ${completedMilestones}/${subject.milestones.length}</div>${subject.milestones.map(item => `<label class="milestone-item ${item.completed ? 'complete' : ''}"><input type="checkbox" data-toggle-milestone="${escapeHtml(subject.id)}" data-milestone-id="${escapeHtml(item.id)}" ${item.completed ? 'checked' : ''}><span>${escapeHtml(item.title)}</span>${item.targetDate ? `<small>${escapeHtml(formatDate(item.targetDate))}</small>` : ''}</label>`).join('')}</div>` : ''}
       ${subject.chapters?.length ? renderSubjectCurriculum(subject) : ''}
-      <div class="subject-card-actions"><button class="mini-action" data-log-subject="${escapeHtml(subject.id)}">Log work</button><button class="mini-action" data-schedule-subject="${escapeHtml(subject.id)}" data-calendar-date="${escapeHtml(nextStudyDate())}">Schedule task</button><button class="mini-action" data-edit-subject="${escapeHtml(subject.id)}">Edit subject</button></div></article>`;
+      <div class='subject-card-actions'><button class='mini-action' data-log-subject='${escapeHtml(subject.id)}'>Log work</button><button class='mini-action' data-schedule-subject='${escapeHtml(subject.id)}' data-calendar-date='${escapeHtml(nextStudyDate())}'>Schedule task</button><button class='mini-action' data-study-break='${escapeHtml(subject.id)}'>${studyBreak ? (studyBreak.startDate > today ? 'Cancel study break' : 'End study break') : 'Study break'}</button><button class='mini-action' data-edit-subject='${escapeHtml(subject.id)}'>Edit subject</button></div>${studyBreak ? `<div class='study-break-status'><strong>${escapeHtml(studyBreak.name)}</strong> · ${studyBreak.startDate > today ? `Starts ${escapeHtml(formatDate(studyBreak.startDate))}` : `${studyBreak.dailyMinutes} min/day`} · through ${escapeHtml(formatDate(studyBreak.endDate))}</div>` : ''}</article>`;
     }).join('') : `<div class="empty-state empty-subjects"><strong>${query ? 'No matching subjects' : 'No subjects yet'}</strong><p>${query ? 'Try another search.' : 'Add a subject and enter the curriculum details to start planning.'}</p><button class="primary-button" id="emptyAddSubject">＋ Add subject</button></div>`;
     $$('.subject-card').forEach(card => { if (openCurriculumIds.has(card.dataset.subjectCard)) { const details = card.querySelector('.subject-curriculum-details'); if (details) details.open = true; } });
   }
@@ -1143,6 +1146,7 @@
       if (!confirm(`Delete ${existing.name}? Its activity log will remain, but its subject setup will be removed.`)) return;
       state.subjects = state.subjects.filter(item => item.id !== existing.id);
       state.manualTasks = state.manualTasks.map(task => task.subjectId === existing.id ? { ...task, subjectId: '' } : task);
+      state.studyBreaks = state.studyBreaks.filter(item => item.subjectId !== existing.id);
       saveState(); closeModal(); renderAll(); showToast('Subject deleted.');
     });
   }
@@ -1196,6 +1200,45 @@
     });
   }
 
+  function openStudyBreak(subjectId) {
+    const subject = state.subjects.find(item => item.id === subjectId);
+    if (!subject) return;
+    const current = StudyBreaks.findUpcomingForSubject(state.studyBreaks, subjectId, today);
+    if (current) {
+      if (!confirm(`End the study break for ${subject.name}? Its original schedule will become visible again.`)) return;
+      state.studyBreaks = state.studyBreaks.filter(item => item.id !== current.id);
+      saveState(); renderAll(); showToast('Study break ended. Your original schedule is restored.');
+      return;
+    }
+    const body = `<div class='subject-form-grid'>
+      <label class='field full'><span>Study break name</span><input id='studyBreakName' maxlength='80' value='Study Break' placeholder='e.g. Biology test preparation' /></label>
+      <label class='field'><span>Start date</span><input id='studyBreakStart' type='date' value='${today}' min='${today}' /></label>
+      <label class='field'><span>How many days?</span><input id='studyBreakDays' type='number' min='1' max='365' step='1' value='7' /></label>
+      <label class='field'><span>Study time per day (minutes)</span><input id='studyBreakMinutes' type='number' min='1' max='600' step='1' value='${subject.tracking === 'minutes' ? subject.dailyMinutes || 45 : 45}' /></label>
+    </div><p class='modal-help'>This temporarily replaces all scheduled work for ${escapeHtml(subject.name)} on every calendar day in the date range, including weekends and days off. Your original assignments are kept and return when the break ends.</p><p class='form-error' id='studyBreakError'></p>`;
+    const footer = `<div class='right-actions'><button class='outline-button' id='cancelStudyBreak'>Cancel</button><button class='primary-button' id='saveStudyBreak'>Start study break</button></div>`;
+    openModal('Start a study break', 'TEMPORARY SUBJECT SCHEDULE', body, footer);
+    $('#cancelStudyBreak').addEventListener('click', closeModal);
+    $('#saveStudyBreak').addEventListener('click', () => {
+      const startDate = $('#studyBreakStart').value;
+      const record = StudyBreaks.normalize({
+        id: makeId('study-break'), subjectId, name: $('#studyBreakName').value.trim() || 'Study Break',
+        startDate, durationDays: Number($('#studyBreakDays').value), dailyMinutes: Number($('#studyBreakMinutes').value),
+        createdAt: new Date().toISOString()
+      });
+      if (!record || startDate < today) {
+        $('#studyBreakError').textContent = 'Choose a valid start date, 1–365 days, and 1–600 minutes per day.';
+        return;
+      }
+      state.studyBreaks = state.studyBreaks.filter(item => item.subjectId !== subjectId || item.cancelled || item.endDate < startDate);
+      state.studyBreaks.push(record);
+      const persisted = saveState();
+      if (startDate <= today && record.endDate >= today) { selectedDate = today; calendarCursor = parseDate(today); }
+      closeModal(); renderAll();
+      if (!persisted) showToast('Study break started for this session, but browser saving failed.');
+      else showToast(`${record.name} scheduled for ${record.durationDays} days.`);
+    });
+  }
   function addManualTask(key, editingTask = null, presetSubjectId = '') {
     const task = editingTask ? { ...editingTask } : null;
     const selectedSubjectId = task?.subjectId || presetSubjectId || '';
@@ -1317,7 +1360,7 @@
   function getAllDayTasksForPrint(key) {
     const live = getAllDayTasks(key);
     const liveIds = new Set(live.map(task => task.id));
-    const completedPast = state.logs.filter(log => log.date === key && log.taskId && !liveIds.has(log.taskId)).map(log => {
+    const completedPast = state.logs.filter(log => log.date === key && log.taskId && !liveIds.has(log.taskId) && !StudyBreaks.findForSubject(state.studyBreaks, log.subjectId, key)).map(log => {
       const subject = state.subjects.find(s => s.id === log.subjectId) || null;
       return { id: log.taskId, subject, label: log.label, rangeLabel: log.rangeLabel || log.label, quantity: log.quantity, unit: log.unit, done: true };
     });
@@ -1401,7 +1444,20 @@
         if (!imported || !Array.isArray(imported.subjects) || !imported.settings) throw new Error('This does not look like a Daymark backup.');
         if (!confirm('Restore this backup? It will replace the planner currently saved in this browser.')) return;
         const defaults = defaultState();
-      state = { ...defaults, ...imported, settings: { ...defaults.settings, ...imported.settings }, subjects: imported.subjects.map(normalizeSubject), logs: Array.isArray(imported.logs) ? imported.logs : [], manualTasks: Array.isArray(imported.manualTasks) ? imported.manualTasks : [], taskOverrides: imported.taskOverrides && typeof imported.taskOverrides === 'object' ? imported.taskOverrides : {}, lockedTasks: Array.isArray(imported.lockedTasks) ? imported.lockedTasks : [], planSnapshots: imported.planSnapshots && typeof imported.planSnapshots === 'object' ? imported.planSnapshots : {}, dayNotes: imported.dayNotes && typeof imported.dayNotes === 'object' ? imported.dayNotes : {} };
+      state = {
+        ...defaults,
+        ...imported,
+        version: 8,
+        settings: { ...defaults.settings, ...imported.settings },
+        subjects: imported.subjects.map(normalizeSubject),
+        logs: Array.isArray(imported.logs) ? imported.logs : [],
+        manualTasks: Array.isArray(imported.manualTasks) ? imported.manualTasks : [],
+        taskOverrides: imported.taskOverrides && typeof imported.taskOverrides === 'object' ? imported.taskOverrides : {},
+        lockedTasks: Array.isArray(imported.lockedTasks) ? imported.lockedTasks : [],
+        planSnapshots: imported.planSnapshots && typeof imported.planSnapshots === 'object' ? imported.planSnapshots : {},
+        dayNotes: imported.dayNotes && typeof imported.dayNotes === 'object' ? imported.dayNotes : {},
+        studyBreaks: StudyBreaks.normalizeAll(imported.studyBreaks)
+      };
         saveState(); renderAll(); showToast('Backup restored.');
       } catch (error) { alert(`Could not restore this file: ${error.message}`); }
     };
@@ -2033,6 +2089,8 @@
       const qtyInput = $(`[data-task-quantity="${CSS.escape(id)}"]`);
       toggleTask(id, checked, qtyInput ? Number(qtyInput.value) : null, taskToggle.dataset.taskDate || selectedDate); return;
     }
+    const studyBreakButton = event.target.closest('[data-study-break]');
+    if (studyBreakButton) { openStudyBreak(studyBreakButton.dataset.studyBreak); return; }
     const edit = event.target.closest('[data-edit-subject]');
     if (edit) { const sub = state.subjects.find(s => s.id === edit.dataset.editSubject); if (sub) subjectForm(sub); return; }
     const log = event.target.closest('[data-log-subject]');

@@ -1,6 +1,6 @@
-# Daymark V2.5 — Local Ollama AI
+# Daymark V2.6 — Study Breaks
 
-Daymark is a local-first homeschool planner built with HTML, CSS, and JavaScript. V2.5 replaces the paid cloud AI curriculum-import connection with a local Python bridge to Ollama. Curriculum images are processed by an installed local vision model on this computer; no API key or paid AI endpoint is used by the importer.
+Daymark is a local-first homeschool planner built with HTML, CSS, and JavaScript. V2.5 replaces the paid cloud AI curriculum-import connection with a local Python bridge to Ollama. Curriculum images are processed by an installed local vision model on this computer; no API key or paid AI endpoint is used by the importer. V2.6 adds temporary, customizable subject-level study breaks without overwriting the normal schedule.
 
 ## Start Daymark
 
@@ -95,9 +95,18 @@ Planner data remains in browser storage as before. Export a backup from **Settin
 - `index.html` — app structure
 - `styles.css` — visual design, responsive layout, and print styles
 - `app.js` — planner, curriculum import UI, local AI client, scheduling, tracking, storage, and reports
+- `study-breaks.js` — reusable temporary study-break date and calendar replacement logic
 - `serve.py` — standard-library local web server and Ollama bridge
 - `Start-Daymark.bat` — Windows launcher
 - `tests/` — local helper unit tests
+
+
+
+## V2.6 — Temporary subject study breaks
+
+Start a customizable study break from any subject card. Choose a name, start date, number of consecutive calendar days (1–365), and daily study time (1–600 minutes). Daymark displays one entry per calendar day, including weekends and days off, and temporarily replaces that subject's generated targets, dated curriculum activities, and manual tasks for the covered dates. Other subjects and personal tasks remain visible. The original schedule is not edited or deleted; it reappears when the break expires or when you end it early. Study-break sessions can be marked complete and are recorded in the activity log.
+
+Run the built-in study-break tests with `npm test` (Node.js is required for the test command; the planner itself remains a browser app).
 
 ## Current features carried forward
 
