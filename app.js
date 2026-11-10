@@ -1146,6 +1146,7 @@
       if (!confirm(`Delete ${existing.name}? Its activity log will remain, but its subject setup will be removed.`)) return;
       state.subjects = state.subjects.filter(item => item.id !== existing.id);
       state.manualTasks = state.manualTasks.map(task => task.subjectId === existing.id ? { ...task, subjectId: '' } : task);
+      state.studyBreaks = state.studyBreaks.filter(item => item.subjectId !== existing.id);
       saveState(); closeModal(); renderAll(); showToast('Subject deleted.');
     });
   }
@@ -1443,7 +1444,20 @@
         if (!imported || !Array.isArray(imported.subjects) || !imported.settings) throw new Error('This does not look like a Daymark backup.');
         if (!confirm('Restore this backup? It will replace the planner currently saved in this browser.')) return;
         const defaults = defaultState();
-      state = { ...defaults, ...imported, settings: { ...defaults.settings, ...imported.settings }, subjects: imported.subjects.map(normalizeSubject), logs: Array.isArray(imported.logs) ? imported.logs : [], manualTasks: Array.isArray(imported.manualTasks) ? imported.manualTasks : [], taskOverrides: imported.taskOverrides && typeof imported.taskOverrides === 'object' ? imported.taskOverrides : {}, lockedTasks: Array.isArray(imported.lockedTasks) ? imported.lockedTasks : [], planSnapshots: imported.planSnapshots && typeof imported.planSnapshots === 'object' ? imported.planSnapshots : {}, dayNotes: imported.dayNotes && typeof imported.dayNotes === 'object' ? imported.dayNotes : {} };
+      state = {
+        ...defaults,
+        ...imported,
+        version: 8,
+        settings: { ...defaults.settings, ...imported.settings },
+        subjects: imported.subjects.map(normalizeSubject),
+        logs: Array.isArray(imported.logs) ? imported.logs : [],
+        manualTasks: Array.isArray(imported.manualTasks) ? imported.manualTasks : [],
+        taskOverrides: imported.taskOverrides && typeof imported.taskOverrides === 'object' ? imported.taskOverrides : {},
+        lockedTasks: Array.isArray(imported.lockedTasks) ? imported.lockedTasks : [],
+        planSnapshots: imported.planSnapshots && typeof imported.planSnapshots === 'object' ? imported.planSnapshots : {},
+        dayNotes: imported.dayNotes && typeof imported.dayNotes === 'object' ? imported.dayNotes : {},
+        studyBreaks: StudyBreaks.normalizeAll(imported.studyBreaks)
+      };
         saveState(); renderAll(); showToast('Backup restored.');
       } catch (error) { alert(`Could not restore this file: ${error.message}`); }
     };
